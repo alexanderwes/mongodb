@@ -13,6 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.mongodb.MongoException;
+import com.mongodb.MongoWriteException;
+
 import static javafx.scene.control.Alert.AlertType.*;
 
 /**
@@ -167,17 +171,23 @@ public class Controller {
            
             new Thread() {
             	public void run() {
-            		try {
-            			booksDb.insertBook(book);  
-                    } catch (SQLException ex) {
-                    	Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-                    }
             		
-            		javafx.application.Platform.runLater(new Runnable() {
-            			public void run() {
-            				booksView.showAlertAndWait("Book has been added", INFORMATION);
-            			}
-            		});
+            		if (booksDb.insertBook(book)) {  
+                   
+	            		javafx.application.Platform.runLater(new Runnable() {
+	            			public void run() {
+	            				booksView.showAlertAndWait("Book has been added", INFORMATION);
+	            			}
+	            		});
+            		}
+            		else {
+            			javafx.application.Platform.runLater(new Runnable() {
+            				public void run() {
+            					booksView.showAlertAndWait("Book already exists or not connected to DB", ERROR);
+            				}
+            			});
+            		}
+            		
             	}
             }.start();
           

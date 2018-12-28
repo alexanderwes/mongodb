@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.mongodb.MongoException;
+import com.mongodb.MongoWriteException;
+
 /**
  * This interface declares methods for querying a Books database.
  * Different implementations of this interface handles the connection and
@@ -75,9 +78,11 @@ public interface BooksDbInterface {
      * @param authors
      * @param genre
      * @param rating
+     * @return 
      * @throws SQLException
+     * @throws Exception 
      */
-    public void insertBook(Book book) throws SQLException;
+    public boolean insertBook(Book book) throws MongoWriteException;
     /**
      * Updating an existing book's rating
      * @param book

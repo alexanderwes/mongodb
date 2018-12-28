@@ -13,6 +13,8 @@ import org.bson.Document;
 
 import com.mongodb.MongoClient;
 import com.mongodb.MongoCredential;
+import com.mongodb.MongoException;
+import com.mongodb.MongoWriteException;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
@@ -38,9 +40,8 @@ import booksdbclient.model.MockBooksDb;
 public class MockBooksDb implements BooksDbInterface {
 
 	private FindIterable find;
-	
 	private MongoCollection<Document> collection;
-	private Genre genre;
+	
 
 	public MockBooksDb() {
 		
@@ -80,11 +81,14 @@ public class MockBooksDb implements BooksDbInterface {
     
     	List<Book> list = new ArrayList<>();
     	
-    	List<Document> books = collection.find(Filters.regex("title", searchTitle, "i")).into(new ArrayList<Document>());
+    	if (collection != null) {
     	
-    	list = copyBooksToList(books);
-    	list = fixList(list);
-    	list = fixList2(list);
+    		List<Document> books = collection.find(Filters.regex("title", searchTitle, "i")).into(new ArrayList<Document>());
+	   	
+	    	list = copyBooksToList(books);
+	    	list = fixList(list);
+	    	list = fixList2(list);
+    	}
     	
     	return list;
     }
@@ -93,13 +97,13 @@ public class MockBooksDb implements BooksDbInterface {
 	public List<Book> searchBooksByAuthor(String name) {
 	
 		List<Book> list = new ArrayList<>();
-		
-    	List<Document> books = collection.find(Filters.regex("authors.name", name, "i")).into(new ArrayList<Document>());
-
-    	list = copyBooksToList(books);
-    	list = fixList(list);
-    	list = fixList2(list);
-    	
+		if (collection != null) {
+	    	List<Document> books = collection.find(Filters.regex("authors.name", name, "i")).into(new ArrayList<Document>());
+	
+	    	list = copyBooksToList(books);
+	    	list = fixList(list);
+	    	list = fixList2(list);
+		}
 		return list;
 	}
 
@@ -108,12 +112,14 @@ public class MockBooksDb implements BooksDbInterface {
 
 		List<Book> list = new ArrayList<>();
 		
-    	List<Document> books = collection.find(Filters.regex("isbn", isbn)).into(new ArrayList<Document>());
-    	
-    	list = copyBooksToList(books);
-    	list = fixList(list);
-    	list = fixList2(list);
-    	
+		if (collection != null) {
+	    	List<Document> books = collection.find(Filters.regex("isbn", isbn)).into(new ArrayList<Document>());
+	    	
+	    	list = copyBooksToList(books);
+	    	list = fixList(list);
+	    	list = fixList2(list);
+	    	
+		}
 		return list;
 	}
 
@@ -121,13 +127,14 @@ public class MockBooksDb implements BooksDbInterface {
 	public List<Book> searchBooksByRating(String rating) {
 		
 		List<Book> list = new ArrayList<>();
-
-    	List<Document> books = collection.find(eq("rating", Integer.parseInt(rating))).into(new ArrayList<Document>());
-    	
-    	list = copyBooksToList(books);
-    	list = fixList(list);
-    	list = fixList2(list);
-    	
+		
+		if (collection != null) {
+	    	List<Document> books = collection.find(eq("rating", Integer.parseInt(rating))).into(new ArrayList<Document>());
+	    	
+	    	list = copyBooksToList(books);
+	    	list = fixList(list);
+	    	list = fixList2(list);
+		}
 		return list;
 	}
 
@@ -135,34 +142,54 @@ public class MockBooksDb implements BooksDbInterface {
 	public List<Book> searchBooksByGenre(Genre genre) {
 	
 		List<Book> list = new ArrayList<>();
-    	List<Document> books = collection.find(Filters.regex("genre", genre.toString())).into(new ArrayList<Document>());
+		
+		if (collection != null) {
+	    	List<Document> books = collection.find(Filters.regex("genre", genre.toString())).into(new ArrayList<Document>());
+	    	
+	    	list = copyBooksToList(books);
+	    	list = fixList(list);
+	    	list = fixList2(list);
     	
-    	list = copyBooksToList(books);
-    	list = fixList(list);
-    	list = fixList2(list);
-    	
+		}
 		return list;
 	}
 
 	@Override
-	public void insertBook(Book book) {
+	public boolean insertBook(Book book) {
 		
-		Document document = new Document ("title", book.getTitle())
-		.append("isbn", book.getIsbn())
-		.append("genre", book.getGenre().toString())
-		.append("rating", book.getRating())
-		.append("authors", Arrays.asList(new Document ("name", book.getAuthors().get(0).getName())
-		.append("dob", book.getAuthors().get(0).getDob().toString())));
+	boolean check = false;
+	
+	if (collection != null) {
 		
-		collection.insertOne(document);
+		for (int i=0; i<getBooks().size(); i++) {
+	
+			if (book.getIsbn().equals(getBooks().get(i).getIsbn())) {
+				check = true;
+				break;
+			}
+		}
+			if (check == false) {
+				Document document = new Document ("title", book.getTitle())
+				.append("isbn", book.getIsbn())
+				.append("genre", book.getGenre().toString())
+				.append("rating", book.getRating())
+				.append("authors", Arrays.asList(new Document ("name", book.getAuthors().get(0).getName())
+				.append("dob", book.getAuthors().get(0).getDob().toString())));
+				
+				collection.insertOne(document);	
+				return true;
+			}
+		}
+	return false;
 	}
 
 	@Override
 	public boolean updateRating(String isbn, int rating) {
-		
-		if (collection.updateOne(eq("isbn", isbn.toLowerCase()), set("rating", rating))
-				.getModifiedCount() != 0)
-			return true;
+		if (collection != null) {
+			if (collection.updateOne(eq("isbn", isbn.toLowerCase()), set("rating", rating))
+					.getModifiedCount() != 0)
+				return true;
+		}
 		
 		return false;
 	}
@@ -172,8 +199,10 @@ public class MockBooksDb implements BooksDbInterface {
 		
 		Document author_ = new Document().append("name", author.getName())
                 .append("dob", author.getDob().toString());
-		if (collection.updateOne(eq("isbn", isbn),Updates.addToSet("authors", author_)).getModifiedCount() != 0)
-			return true;
+		if (collection != null) {
+			if (collection.updateOne(eq("isbn", isbn),Updates.addToSet("authors", author_)).getModifiedCount() != 0)
+				return true;
+		}
 		
 		return false;
 	}
@@ -181,8 +210,10 @@ public class MockBooksDb implements BooksDbInterface {
 	@Override
 	public boolean deleteBook(String isbn) {
 		
-		if (collection.deleteOne(eq("isbn", isbn)).getDeletedCount() == 1)
-			return true;
+		if (collection != null) {
+			if (collection.deleteOne(eq("isbn", isbn)).getDeletedCount() == 1)
+				return true;
+		}
 		
 		return false;
 	}
@@ -190,14 +221,13 @@ public class MockBooksDb implements BooksDbInterface {
 	@Override
 	public List<Book> getBooks() {		
 		List<Book> list = new ArrayList<>();
-		
-		find = collection.find();
-    	List<Document> books = collection.find().into(new ArrayList<Document>());
-    	
-    	list = copyBooksToList(books);
-    	list = fixList(list);
-    	list = fixList2(list);
-		
+		if (collection != null) {
+	    	List<Document> books = collection.find().into(new ArrayList<Document>());
+	    	
+	    	list = copyBooksToList(books);
+	    	list = fixList(list);
+	    	list = fixList2(list);
+		}
 		return list;
 	}	
 	
