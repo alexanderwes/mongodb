@@ -227,11 +227,16 @@ public class MockBooksDb implements BooksDbInterface {
 
 	@Override
 	public boolean addAuthor(String isbn, Author author) {
-		
+		boolean authorCheck = false;
 		Document author_ = new Document().append("name", author.getName())
                 .append("dob", author.getDob().toString())
                 .append("id", author.getId());
-		if (booksCollection != null) {
+		for (int i=0; i<getAuthors().size(); i++) {
+			if (author.getId().equals(getAuthors().get(i).getId())) {
+				authorCheck = true;
+			}
+		}
+		if (booksCollection != null && authorCheck == false) {
 			if (booksCollection.updateOne(eq("isbn", isbn),Updates.addToSet("authors", author_)).getModifiedCount() != 0) {
 				authorsCollection.insertOne(author_);
 				return true;
