@@ -197,7 +197,11 @@ public class BooksPane extends VBox {
             TextField author = new TextField();
             grid.add(new Label("Author"), 0, 2);
             grid.add(author, 1, 2);
-            
+            TextField authorId = new TextField();
+            grid.add(new Label("Author ID"), 0, 6);
+            grid.add(authorId, 1, 6);
+//            grid.add(child, columnIndex, rowIndex);
+                        
             TextField year = new TextField();
             TextField month = new TextField();
             TextField day = new TextField();
@@ -206,6 +210,7 @@ public class BooksPane extends VBox {
             grid.add(month, 2, 3);
             grid.add(day, 3, 3);
            
+            
 
 //            year.setMaxWidth(50);
             month.setMaxWidth(50);
@@ -240,7 +245,7 @@ public class BooksPane extends VBox {
             dialog.getDialogPane().lookupButton(submit).addEventFilter(
                     ActionEvent.ACTION, event -> {
                     	
-                        controller.addbook(title.getText(), author.getText(), Integer.parseInt("0" + year.getText()),
+                        controller.addbook(authorId.getText(), title.getText(), author.getText(), Integer.parseInt("0" + year.getText()),
                         		Integer.parseInt("0" + month.getText()), Integer.parseInt("0" + day.getText()), isbn.getText(), genre.getValue(), rating.getValue());
                     });
             dialog.showAndWait();
@@ -274,6 +279,7 @@ public class BooksPane extends VBox {
             TextField year = new TextField();
             TextField month = new TextField();
             TextField day = new TextField();
+            TextField authorId = new TextField();
             
             grid.add(new Label("ISBN"), 0, 1);
             grid.add(isbn, 1, 1);
@@ -286,7 +292,10 @@ public class BooksPane extends VBox {
             grid.add(month, 2, 3);
             grid.add(day, 3, 3);
            
-
+            grid.add(new Label("Id"), 0, 4);
+            grid.add(authorId, 1, 4);
+            
+            
 //            year.setMaxWidth(50);
             month.setMaxWidth(50);
             day.setMaxWidth(50);
@@ -303,7 +312,7 @@ public class BooksPane extends VBox {
 
             dialog.getDialogPane().lookupButton(submit).addEventHandler(ActionEvent.ACTION, event -> {
                 controller.addAuthor(isbn.getText(), author.getText(), Integer.parseInt("0" + year.getText()),
-                		Integer.parseInt("0" + month.getText()), Integer.parseInt("0" + day.getText()));
+                		Integer.parseInt("0" + month.getText()), Integer.parseInt("0" + day.getText()), authorId.getText());
             });
             dialog.showAndWait();
         });

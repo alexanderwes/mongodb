@@ -163,11 +163,11 @@ public class Controller {
     	}.start();
     }
 
-    protected void addbook(String title, String name, int year, int month, int day, String isbn, Genre genre, int rating) {
+    protected void addbook(String id, String title, String name, int year, int month, int day, String isbn, Genre genre, int rating) {
  
         if (!title.trim().isEmpty() && !isbn.trim().isEmpty() && !name.trim().isEmpty() && year != 0 && month !=0 && day !=0) {
             Book book = new Book(isbn, title, genre, rating);
-            book.addAuthor(new Author(name, LocalDate.of(year, month, day)));
+            book.addAuthor(new Author(name, LocalDate.of(year, month, day), id));
            
             new Thread() {
             	public void run() {
@@ -183,7 +183,7 @@ public class Controller {
             		else {
             			javafx.application.Platform.runLater(new Runnable() {
             				public void run() {
-            					booksView.showAlertAndWait("Book already exists or not connected to DB", ERROR);
+            					booksView.showAlertAndWait("Book/authorId already exists or not connected to DB", ERROR);
             				}
             			});
             		}
@@ -229,11 +229,11 @@ public class Controller {
         }
     }
 
-    protected void addAuthor(String isbn, String name, int year, int month, int day) {
+    protected void addAuthor(String isbn, String name, int year, int month, int day, String id) {
     	
     	if (isbn != null && name != null && year != 0 && month != 0 && day != 0) {
 	    	new Thread() {
-	        	Author author = new Author(name, LocalDate.of(year, month, day));
+	        	Author author = new Author(name, LocalDate.of(year, month, day), id);
 	    		public void run() {
 	    	        try {
 	    				if (booksDb.addAuthor(isbn, author)) {

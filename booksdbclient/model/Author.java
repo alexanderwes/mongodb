@@ -15,6 +15,7 @@ public class Author {
     private String name;
     private LocalDate dob;
     private ArrayList<String> isbn;
+    private String id;
     
     
     /**
@@ -23,9 +24,10 @@ public class Author {
      * @param name name of the author
      * @param dob birth date of the author
      */
-    public Author(String name, LocalDate dob) {
+    public Author(String name, LocalDate dob, String id) {
         this.name = name;
         this.dob = dob;
+        this.id = id;
         isbn = new ArrayList<>();
     }
     
@@ -37,6 +39,14 @@ public class Author {
     	this.isbn.add(isbn);
     }
 
+    
+    public String getId() {
+    	return this.id;
+    }
+    
+    public void setId(String id) {
+    	this.id = id;
+    }
     public ArrayList<String> getBooks() {
     	
     	return this.isbn;
@@ -65,6 +75,6 @@ public class Author {
 
     @Override
     public String toString() {
-        return "Name: " + name + " | Birth date: " + dob + " | Books: " + isbn;
+        return "Name: " + name + " | Birth date: " + dob + " | ID: " +id +" | Books: " + isbn;
     }
 }

@@ -13,8 +13,6 @@ import org.bson.Document;
 
 import com.mongodb.MongoClient;
 import com.mongodb.MongoCredential;
-import com.mongodb.MongoException;
-import com.mongodb.MongoWriteException;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
@@ -40,7 +38,8 @@ import booksdbclient.model.MockBooksDb;
 public class MockBooksDb implements BooksDbInterface {
 
 	private FindIterable find;
-	private MongoCollection<Document> collection;
+	private MongoCollection<Document> authorsCollection;
+	private MongoCollection<Document> booksCollection;
 	
 
 	public MockBooksDb() {
@@ -60,7 +59,8 @@ public class MockBooksDb implements BooksDbInterface {
 		
 		if (mongoClient.getServerAddressList() != null) {
 			MongoDatabase mongoDatabase = mongoClient.getDatabase("library");
-			collection = mongoDatabase.getCollection("books");
+			booksCollection = mongoDatabase.getCollection("books");
+			authorsCollection = mongoDatabase.getCollection("authors");
 			return true;
 		}		
 		else
@@ -78,12 +78,12 @@ public class MockBooksDb implements BooksDbInterface {
 
 	@Override
     public List<Book> searchBooksByTitle(String searchTitle) {
-    
+	
     	List<Book> list = new ArrayList<>();
     	
-    	if (collection != null) {
+    	if (booksCollection != null) {
     	
-    		List<Document> books = collection.find(Filters.regex("title", searchTitle, "i")).into(new ArrayList<Document>());
+    		List<Document> books = booksCollection.find(Filters.regex("title", searchTitle, "i")).into(new ArrayList<Document>());
 	   	
 	    	list = copyBooksToList(books);
 	    	list = fixList(list);
@@ -97,8 +97,8 @@ public class MockBooksDb implements BooksDbInterface {
 	public List<Book> searchBooksByAuthor(String name) {
 	
 		List<Book> list = new ArrayList<>();
-		if (collection != null) {
-	    	List<Document> books = collection.find(Filters.regex("authors.name", name, "i")).into(new ArrayList<Document>());
+		if (booksCollection != null) {
+	    	List<Document> books = booksCollection.find(Filters.regex("authors.name", name, "i")).into(new ArrayList<Document>());
 	
 	    	list = copyBooksToList(books);
 	    	list = fixList(list);
@@ -112,8 +112,8 @@ public class MockBooksDb implements BooksDbInterface {
 
 		List<Book> list = new ArrayList<>();
 		
-		if (collection != null) {
-	    	List<Document> books = collection.find(Filters.regex("isbn", isbn)).into(new ArrayList<Document>());
+		if (booksCollection != null) {
+	    	List<Document> books = booksCollection.find(Filters.regex("isbn", isbn)).into(new ArrayList<Document>());
 	    	
 	    	list = copyBooksToList(books);
 	    	list = fixList(list);
@@ -128,8 +128,8 @@ public class MockBooksDb implements BooksDbInterface {
 		
 		List<Book> list = new ArrayList<>();
 		
-		if (collection != null) {
-	    	List<Document> books = collection.find(eq("rating", Integer.parseInt(rating))).into(new ArrayList<Document>());
+		if (booksCollection != null) {
+	    	List<Document> books = booksCollection.find(eq("rating", Integer.parseInt(rating))).into(new ArrayList<Document>());
 	    	
 	    	list = copyBooksToList(books);
 	    	list = fixList(list);
@@ -143,8 +143,8 @@ public class MockBooksDb implements BooksDbInterface {
 	
 		List<Book> list = new ArrayList<>();
 		
-		if (collection != null) {
-	    	List<Document> books = collection.find(Filters.regex("genre", genre.toString())).into(new ArrayList<Document>());
+		if (booksCollection != null) {
+	    	List<Document> books = booksCollection.find(Filters.regex("genre", genre.toString())).into(new ArrayList<Document>());
 	    	
 	    	list = copyBooksToList(books);
 	    	list = fixList(list);
@@ -157,26 +157,57 @@ public class MockBooksDb implements BooksDbInterface {
 	@Override
 	public boolean insertBook(Book book) {
 		
-	boolean check = false;
+	boolean checkBook = false;
+	boolean checkAuthor = false;
 	
-	if (collection != null) {
+	if (booksCollection != null) {
 		
 		for (int i=0; i<getBooks().size(); i++) {
 	
 			if (book.getIsbn().equals(getBooks().get(i).getIsbn())) {
-				check = true;
+				checkBook = true;
 				break;
 			}
 		}
-			if (check == false) {
+		
+		for (int i=0; i<getAuthors().size(); i++) {
+			if (book.getAuthors().get(0).getId().equals(getAuthors().get(i).getId())) {
+				checkAuthor = true;
+				break;
+			}
+		}
+		
+		if (checkBook == false && checkAuthor == true) {
+			Document document = new Document ("title", book.getTitle())
+					.append("isbn", book.getIsbn())
+					.append("genre", book.getGenre().toString())
+					.append("rating", book.getRating())
+					.append("authors", Arrays.asList(new Document ("name", book.getAuthors().get(0).getName())
+					.append("dob", book.getAuthors().get(0).getDob().toString())
+					.append("id", book.getAuthors().get(0).getId())));
+					
+					booksCollection.insertOne(document);
+					return true;
+		}
+			if (checkBook == false && checkAuthor == false) {
+				
+				Document authorDoc = new Document("name", book.getAuthors().get(0).getName())
+				.append("dob", book.getAuthors().get(0).getDob().toString())
+				.append("id", book.getAuthors().get(0).getId());
+				authorsCollection.insertOne(authorDoc);			
+				
 				Document document = new Document ("title", book.getTitle())
 				.append("isbn", book.getIsbn())
 				.append("genre", book.getGenre().toString())
 				.append("rating", book.getRating())
 				.append("authors", Arrays.asList(new Document ("name", book.getAuthors().get(0).getName())
-				.append("dob", book.getAuthors().get(0).getDob().toString())));
+				.append("dob", book.getAuthors().get(0).getDob().toString())
+				.append("id", book.getAuthors().get(0).getId())));
 				
-				collection.insertOne(document);	
+				booksCollection.insertOne(document);
+								
+
+				
 				return true;
 			}
 		}
@@ -185,8 +216,8 @@ public class MockBooksDb implements BooksDbInterface {
 
 	@Override
 	public boolean updateRating(String isbn, int rating) {
-		if (collection != null) {
-			if (collection.updateOne(eq("isbn", isbn.toLowerCase()), set("rating", rating))
+		if (booksCollection != null) {
+			if (booksCollection.updateOne(eq("isbn", isbn.toLowerCase()), set("rating", rating))
 					.getModifiedCount() != 0)
 				return true;
 		}
@@ -198,10 +229,13 @@ public class MockBooksDb implements BooksDbInterface {
 	public boolean addAuthor(String isbn, Author author) {
 		
 		Document author_ = new Document().append("name", author.getName())
-                .append("dob", author.getDob().toString());
-		if (collection != null) {
-			if (collection.updateOne(eq("isbn", isbn),Updates.addToSet("authors", author_)).getModifiedCount() != 0)
+                .append("dob", author.getDob().toString())
+                .append("id", author.getId());
+		if (booksCollection != null) {
+			if (booksCollection.updateOne(eq("isbn", isbn),Updates.addToSet("authors", author_)).getModifiedCount() != 0) {
+				authorsCollection.insertOne(author_);
 				return true;
+			}
 		}
 		
 		return false;
@@ -210,19 +244,31 @@ public class MockBooksDb implements BooksDbInterface {
 	@Override
 	public boolean deleteBook(String isbn) {
 		
-		if (collection != null) {
-			if (collection.deleteOne(eq("isbn", isbn)).getDeletedCount() == 1)
+		if (booksCollection != null) {
+			if (booksCollection.deleteOne(eq("isbn", isbn)).getDeletedCount() == 1)
 				return true;
 		}
 		
 		return false;
 	}
 
+	public List<Author> getAuthors() {
+
+		List<Author> list = new ArrayList<>();
+		if (authorsCollection != null) {
+			List<Document> authors = authorsCollection.find().into(new ArrayList<Document>());
+			
+			list = copyAuthorsToList(authors);
+		}
+		
+		return list;
+	}
+	
 	@Override
 	public List<Book> getBooks() {		
 		List<Book> list = new ArrayList<>();
-		if (collection != null) {
-	    	List<Document> books = collection.find().into(new ArrayList<Document>());
+		if (booksCollection != null) {
+	    	List<Document> books = booksCollection.find().into(new ArrayList<Document>());
 	    	
 	    	list = copyBooksToList(books);
 	    	list = fixList(list);
@@ -230,6 +276,19 @@ public class MockBooksDb implements BooksDbInterface {
 		}
 		return list;
 	}	
+	
+	private List<Author> copyAuthorsToList(List<Document> authors) {
+		List<Author> list = new ArrayList<>();
+		
+		for (int i=0; i<authors.size(); i++) {
+			Author author = new Author(authors.get(i).getString("name"), LocalDate.parse(authors.get(i).get("dob").toString()),
+					authors.get(i).getString("id"));
+			list.add(author);
+		}
+		
+		
+		return list;
+	}
 	
 	private List<Book> copyBooksToList(List<Document> books) {
 	
@@ -242,7 +301,7 @@ public class MockBooksDb implements BooksDbInterface {
     		
     		for (int j=0; j<authors.size(); j++) {
 	     		Author author = new Author(authors.get(j).getString("name"), 
-	     				LocalDate.parse(authors.get(j).get("dob").toString()));
+	     				LocalDate.parse(authors.get(j).get("dob").toString()), authors.get(j).getString("id"));
 	     		
 	     		author.addIsbn(book.getIsbn());
 	    		book.addAuthor(author);
